@@ -5,6 +5,7 @@ import sys
 from visualization.EndPoint import EndPoint
 from visualization.HUB import HUB
 from visualization.Packet import Packet
+from visualization.InputBox import InputBox
 
 class Button:
     def __init__(self, x, y, width, height, color, text, node_type):
@@ -29,17 +30,27 @@ def draw_nodes(nodes, buttons):
     pygame.display.set_caption("Nodes on Pygame")
 
     clock = pygame.time.Clock()
+    inputBox1 = InputBox(0, 100, 100, 100)
+    inputBox1.draw(screen)
+
 
 
     x = 80
     y = 150
     previous = None
     first = True
+    inputBox = None
+    # input_box2 = InputBox(100, 300, 140, 32)
 
     while True:
         for event in pygame.event.get():
             for node in nodes:
                 node.update_position(event)
+
+
+            if inputBox is not None:
+                inputBox.handle_event(event)
+
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
@@ -69,6 +80,20 @@ def draw_nodes(nodes, buttons):
 
                         elif button.node_type == "Packet":
                             x += 100
+                            # pygame.draw.rect(screen, "black",
+                            #                  (100, 100, 60, 100))
+                            if inputBox is None:
+                                inputBox = InputBox(100, 700, 200, 30)
+                                # print("Case1")
+                            inputBox.active = True
+                            if(inputBox == None):
+                                inputBox = InputBox(event.pos[0], event.pos[1], 200, 30)
+                                # print("Case2")
+                            #inputBox.draw(screen)
+                            # rect = pygame.Rect(x, y, 50, 100)
+                            # color = pygame.Color('black')
+                            # pygame.draw.rect(screen, color, rect, 20)
+                            # print("Kreslim inputbox")
                             nodes.append(Packet(x, y, "Packet", "Pridame neskor"))
 
 
@@ -84,10 +109,8 @@ def draw_nodes(nodes, buttons):
                                 nodes.append(current)
                                 # previous = current
 
-
-
-
-
+        # input_box2.update()
+        # input_box2.draw(screen)
         screen.fill((255, 255, 255))
 
         for node in nodes:
@@ -112,7 +135,33 @@ def draw_nodes(nodes, buttons):
 
         pygame.display.flip()
         clock.tick(60)
+# def main():
+#     clock = pygame.time.Clock()
+#     pygame.init()
+#
+#     screen = pygame.display.set_mode((1000, 900))
+#     input_box1 = InputBox(100, 100, 140, 32)
+#     input_box2 = InputBox(100, 300, 140, 32)
+#     input_boxes = [input_box1, input_box2]
+#     done = False
+#
+#     while not done:
+#         for event in pygame.event.get():
+#             if event.type == pygame.QUIT:
+#                 done = True
+#             for box in input_boxes:
+#                 box.handle_event(event)
+#
+#         for box in input_boxes:
+#             box.update()
 
+#
+#         screen.fill((30, 30, 30))
+#         for box in input_boxes:
+#             box.draw(screen)
+#
+#         pygame.display.flip()
+#         clock.tick(30)
 if __name__ == "__main__":
     nodes = []
     buttons = [
@@ -122,3 +171,4 @@ if __name__ == "__main__":
         Button(700, 50, 200, 50, (0, 0, 0), "Delete all", "Delete")
     ]
     draw_nodes(nodes, buttons)
+    #main()
