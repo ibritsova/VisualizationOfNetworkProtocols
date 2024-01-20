@@ -46,6 +46,7 @@ class HUB(Node):
                 self.move(tuple[0], tuple[1])
 
     def move(self, packet, node):
+        self.packetsOnTheWay.append(packet)
          # TODO: implements
 
     def connect(self, screen, nodeToConnect):
