@@ -1,6 +1,6 @@
 import pygame
 import sys
-import visualization
+
 
 
 
@@ -15,6 +15,7 @@ class Node:
         self.size = size
         self.color = color
         self.prev_node = None
+        self.dragging = False
 
     # def update_position(self, event):
     #     if event.type == pygame.MOUSEMOTION and event.buttons[0] == 1:
@@ -31,7 +32,7 @@ class Node:
                 self.offset_y = self.y - event.pos[1]
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.dragging = False
-        elif event.type == pygame.MOUSEMOTION and self.dragging:
+        elif (event.type == pygame.MOUSEMOTION and self.dragging):
             self.x = event.pos[0] + self.offset_x
             self.y = event.pos[1] + self.offset_y
 

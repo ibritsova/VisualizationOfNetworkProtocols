@@ -1,5 +1,6 @@
 import pygame
-from visualization.Node import Node
+
+from Node import Node
 
 
 class Packet(Node):
