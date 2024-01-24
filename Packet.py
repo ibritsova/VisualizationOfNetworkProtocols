@@ -1,5 +1,6 @@
 import pygame
 
+from InputBox import InputBox
 from Node import Node
 
 
@@ -21,6 +22,7 @@ class Packet(Node):
         self.img = pygame.image.load("packet.png")
         new_size = (50, 50)
         self.img = pygame.transform.scale(self.img, new_size)
+        self.lastSender = None
 
     def receive(self, packet):
         print(f"Packet received: {packet.name}")
@@ -36,3 +38,7 @@ class Packet(Node):
         # Проверка, находится ли мышь над узлом
         return self.x - self.size // 2 < pygame.mouse.get_pos()[0] < self.x + self.size // 2 and \
             self.y - self.size // 2 < pygame.mouse.get_pos()[1] < self.y + self.size // 2
+
+    def createInputBox(self):
+        inputBox = InputBox(250, 650, 500, 100,"", self)
+        return inputBox

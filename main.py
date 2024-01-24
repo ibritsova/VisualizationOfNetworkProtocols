@@ -3,6 +3,7 @@ import sys
 from EndPoint import EndPoint
 from HUB import HUB
 from InputBox import InputBox
+from Node import Node
 from Packet import Packet
 class Button:
     def __init__(self, x, y, width, height, color, text, node_type):
@@ -29,10 +30,12 @@ class Button:
 
 class Drawer:
 
-    def __init__(self, buttons=[], hubs=[], listOfPackets=[]):
+    def __init__(self, buttons=[], hubs=[], packets=[], toDraw=[]):
         self.hubs = hubs
-        self.listOfPackets = listOfPackets
+        self.listOfPackets = packets
         self.buttons = buttons
+        self.InputBoxes = []
+        self.activeNode = None
 
     def draw_nodes(self):
         pygame.init()
@@ -50,7 +53,7 @@ class Drawer:
         inputBox = None
 
         continueProcess = True
-
+        mainButtonsBlocked = False
         while True:
             for event in pygame.event.get():
                 # responsible for dragging elements
@@ -79,9 +82,13 @@ class Drawer:
                             if button.node_type == "HUB" and continueProcess:
                                 newHub = HUB(x, y, f"HUB{len(self.hubs)}", "Pridame neskor", len(self.hubs), self)
                                 if (len(self.hubs) > 0):
-                                    self.hubs[-1].addSubHub(newHub)
+                                    #self.hubs[-1].addSubHub(newHub)
+                                    self.activeNode.addSubHub(newHub)
+                                    newHub.addSubHub(self.activeNode)
                                 self.hubs.append(newHub)
+                                self.activeNode = newHub
                             elif button.node_type == "Packet" and continueProcess:
+
                                 # TODO: fix inputBox
                                 # if inputBox is None:
                                 #     inputBox = InputBox(100, 700, 200, 30)
@@ -89,18 +96,34 @@ class Drawer:
                                 # inputBox.active = True
                                 # if (inputBox == None):
                                 #     inputBox = InputBox(event.pos[0], event.pos[1], 200, 30)
-                                packet = Packet(self.hubs[0].x, self.hubs[0].y, "Packet", "Pridame neskor")
-                                self.listOfPackets.append(packet)
-                                self.hubs[0].recieve(packet)
+                                if (len(self.hubs) > 0):
+                                    packet = Packet(self.activeNode.x, self.activeNode.y, "Packet", "Pridame neskor")
+                                    self.listOfPackets.append(packet)
+                                    inputBox = packet.createInputBox()
+                                    self.InputBoxes.append(inputBox)
+                                    # create send button
+                                    sendButton = Button(650, 760, 100, 50, (0, 255, 0), "Send", "Send")
+                                    self.buttons.append(sendButton)
+                                    mainButtonsBlocked = True
 
 
                             elif button.node_type == "EndPoint" and continueProcess:
-                                hub = self.hubs[-1]
-                                hub.addEndPoint(EndPoint(x, y, "EndPoint", "Pridame neskor"))
+                                #hub = self.hubs[-1]
+                                #hub.addEndPoint(EndPoint(x, y, "EndPoint", "Pridame neskor"))
+                                self.activeNode.addEndPoint(EndPoint(x, y, "EndPoint", "Pridame neskor"))
 
                             elif button.node_type == "Quit":
                                 pygame.quit()
                                 sys.exit()
+
+                            elif button.node_type == "Send":
+                                for inputBox in self.InputBoxes:
+                                    inputBox.saveData()
+                                    self.activeNode.recieve(self.listOfPackets[-1])
+                                    mainButtonsBlocked = False
+                                self.InputBoxes = []
+                                buttons.remove(button)
+
 
             screen.fill((255, 255, 255))
 
@@ -111,19 +134,34 @@ class Drawer:
                         text = font.render(endPoint.get_info(), True, (0, 0, 0), endPoint.text_bg_color)
                         screen.blit(text, (endPoint.x - endPoint.size // 2, endPoint.y - endPoint.size // 2 - 20))
                 if hub.isMouseOver() and continueProcess:
+                    shift = 20
                     font = pygame.font.Font(None, 24)
-                    text = font.render(hub.get_info(), True, (0, 0, 0), hub.text_bg_color)
-                    screen.blit(text, (hub.x - hub.size // 2, hub.y - hub.size // 2 - 20))
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if event.button == 1:
+                            for i in range(len(hub.recievedPackets)):
+                                messageText = font.render(f"{i + 1}." + hub.recievedPackets[i].info, True, (0, 0, 0), hub.text_bg_color)
+                                screen.blit(messageText, (hub.x - hub.size // 2 + hub.size + 10, (hub.y - hub.size // 2 - 20) + shift * i))
+                        elif event.button == 3:
+                            self.activeNode = hub
+                    else:
+                        text = font.render(hub.get_info(), True, (0, 0, 0), hub.text_bg_color)
+                        screen.blit(text, (hub.x - hub.size // 2, hub.y - hub.size // 2 - 20))
 
             for i in range(len(self.hubs)):
                 self.hubs[i].draw(screen)
                 self.hubs[i].connectToEndPoints(screen)
-                if (i > 0):
-                    self.hubs[i].connect(screen, self.hubs[i - 1])
+                # if (i > 0):
+                #     self.hubs[i].connect(screen, self.hubs[i - 1])
+                for subHub in self.hubs[i].subHubs:
+                    self.hubs[i].connect(screen, subHub)
                 self.hubs[i].updateSending()
 
             for packet in self.listOfPackets:
                 packet.draw(screen)
+
+            for inputBox in self.InputBoxes:
+                inputBox.draw(screen)
+
 
             # if continueProcess and len(hubs) > 2:
             #     hubs[-1].draw(screen)
@@ -135,13 +173,15 @@ class Drawer:
             for button in self.buttons:
                 if button.node_type == "Start":
                     for hub in self.hubs:
-                        if button.is_hub_in_area(hub):
+                        if button.is_hub_in_area(hub) or mainButtonsBlocked:
                             continueProcess = False
                         else:
                             continueProcess = True
                 button.draw(screen)
 
             pygame.display.flip()
+
+
 
 
 if __name__ == "__main__":
@@ -151,7 +191,7 @@ if __name__ == "__main__":
         Button(500, 50, 150, 50, (0, 0, 0), "EndPoint", "EndPoint"),
         Button(700, 50, 200, 50, (0, 0, 0), "Delete all", "Delete"),
         Button(900, 300, 100, 50, (0, 0, 0), "Quit", "Quit"),
-        Button(80, 150, 200, 80, (255, 0, 0), "Start Position", "Start")
+        Button(80, 150, 200, 80, (255, 0, 0), "", "Start")
     ]
     drawer = Drawer(buttons)
     drawer.draw_nodes()

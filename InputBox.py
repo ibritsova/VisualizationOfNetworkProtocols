@@ -1,15 +1,20 @@
 import pygame as pg
-class InputBox:
-    COLOR_INACTIVE = pg.Color('lightskyblue3')
-    COLOR_ACTIVE = pg.Color('dodgerblue2')
+
+from Node import Node
+
+
+class InputBox():
+    COLOR_INACTIVE = pg.Color('grey')
+    COLOR_ACTIVE = pg.Color('black')
     # FONT = pg.font.Font(None, 32)
 
-    def __init__(self, x, y, w, h, text='' ):
+    def __init__(self, x, y, w, h, text='', packet = None):
         self.rect = pg.Rect(x, y, w, h)
-        self.color = pg.Color('lightskyblue3')
+        self.color = self.COLOR_INACTIVE
         self.text = text
         self.txt_surface = pg.font.Font(None, 32).render(text, True, self.color)
-        self.active = False
+        self.active = True
+        self.packet = packet
 
     def handle_event(self, event):
         if event.type == pg.MOUSEBUTTONDOWN:
@@ -20,7 +25,7 @@ class InputBox:
             else:
                 self.active = False
             # Change the current color of the input box.
-            self.color = pg.Color('dodgerblue2') if self.active else pg.Color('lightskyblue3')
+            self.color = self.COLOR_ACTIVE if self.active else self.COLOR_INACTIVE
         if event.type == pg.KEYDOWN:
             if self.active:
                 if event.key == pg.K_RETURN:
@@ -43,3 +48,7 @@ class InputBox:
         screen.blit(self.txt_surface, (self.rect.x+5, self.rect.y+5))
         # Blit the rect.
         pg.draw.rect(screen, self.color, self.rect, 2)
+
+    def saveData(self):
+        self.packet.info = self.text
+        self.text = []

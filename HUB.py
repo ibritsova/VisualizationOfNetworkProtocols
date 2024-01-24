@@ -34,9 +34,6 @@ class HUB(Node):
         self.subHubs.append(hub)
 
     def recieve(self, packet):
-        if(type(packet) != Packet):
-            print(f"BLA")
-
         print(f"{self.name} {self.sysIndex} recieved a packet")
         self.recievedPackets.append(packet)
         self.send(packet)
@@ -50,11 +47,14 @@ class HUB(Node):
             self.packetsOnTheWay.append(endPoint)
 
         for subHub in self.subHubs:
+            if(subHub == packet.lastSender): continue
             copyPacket = Packet(packet.x, packet.y,packet.name, packet.info)
+            copyPacket.lastSender = self
             self.drawer.listOfPackets.append(copyPacket)
             self.packetsOnTheWay.append(copyPacket)
             self.packetsOnTheWay.append(subHub)
-        self.drawer.listOfPackets.remove(packet)
+        if packet in self.drawer.listOfPackets:
+            self.drawer.listOfPackets.remove(packet)
 
     def updateSending(self):
         if(len(self.packetsOnTheWay) == 0): return
@@ -112,3 +112,9 @@ class HUB(Node):
     def isMouseOver(self):
         return self.x - self.size // 2 < pygame.mouse.get_pos()[0] < self.x + self.size // 2 and \
                self.y - self.size // 2 < pygame.mouse.get_pos()[1] < self.y + self.size // 2
+    def getMessage(self):
+        message = ""
+        for packet in self.recievedPackets:
+            message += packet.info
+            message += '\n'
+        return message
