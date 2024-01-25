@@ -1,21 +1,23 @@
 import pygame
-import visualization
-from visualization.Node import Node
+
+from Node import Node
 
 
 class EndPoint(Node):
-    def __init__(self, x, y, name, info = "", previousNode = None):
+    def __init__(self, x, y, name, info = ""):
         super().__init__(x, y, name, 40, (0, 0, 255), info)
         self.text_bg_color = (200, 200, 200)
         self.img = pygame.image.load("endPoint.png")
         new_size = (50, 50)
         self.img = pygame.transform.scale(self.img, new_size)
-        self.previousNode = previousNode
+        self.dragging = False
+        self.recievedPackets = []
 
-    def receive(self, packet):
-        print(f"{self.name} received a packet")
-
-
+    def get_info(self):
+        return f'Momentlne ma {len(self.recievedPackets)} neprecitanych sprav'
+    def recieve(self, packet):
+        self.recievedPackets.append(packet)
+        print(f"{self.name} recieved a packet")
     def send(self, packet):
         print(f"Sending packet from {self.name}")
 
