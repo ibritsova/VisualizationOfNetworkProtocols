@@ -1,174 +1,282 @@
-
 import pygame
 import sys
+import time
+from Levels.TransportLevel import TransportLevel
+from Levels.PhysicalLevel import PhysicalLevel
+from Levels.ApplicationLevel import ApplicationLevel
 
-from visualization.EndPoint import EndPoint
-from visualization.HUB import HUB
-from visualization.Packet import Packet
-from visualization.InputBox import InputBox
+from EndPoint import EndPoint
+from HUB import HUB
+from InputBox import InputBox
+from Node import Node
+from Packet import Packet
+from Button import Button
 
-class Button:
-    def __init__(self, x, y, width, height, color, text, node_type):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.color = color
-        self.text = text
-        self.node_type = node_type
-
-    def draw(self, screen):
-        pygame.draw.rect(screen, self.color, self.rect)
-        font = pygame.font.Font(None, 36)
-        text = font.render(self.text, True, (255, 255, 255))
-        screen.blit(text, (self.rect.centerx - text.get_width() // 2, self.rect.centery - text.get_height() // 2))
-
-    def isMouseOver(self):
-        return self.rect.collidepoint(pygame.mouse.get_pos())
-
-def draw_nodes(nodes, buttons):
-    pygame.init()
-
-    screen = pygame.display.set_mode((1000, 900))
-    pygame.display.set_caption("Nodes on Pygame")
-
-    clock = pygame.time.Clock()
-    inputBox1 = InputBox(0, 100, 100, 100)
-    inputBox1.draw(screen)
+class Drawer:
 
 
 
-    x = 80
-    y = 150
-    previous = None
-    first = True
-    inputBox = None
-    # input_box2 = InputBox(100, 300, 140, 32)
+    def __init__(self, buttons=[], hubs=[], packets=[], toDraw=[]):
+        self.hubs = hubs
+        self.listOfPackets = packets
+        self.buttons = buttons
+        self.InputBox = None
+        self.activeNode = None
+        self.destinationNode = None
+        self.continueProcess = True
+        self.mainButtonsBlocked = False
+        self.level = TransportLevel()
+        self.backgroundColor = (255,255,255)
+        self.screen = None
+        self.currentPacket = None
+        self.buttonsBlocked = False
+        self.previousButtonLevel = None
 
-    while True:
-        for event in pygame.event.get():
-            for node in nodes:
-                node.update_position(event)
+    def delete_everything(self):
+        self.continueProcess = True
+        self.hubs = []
+        self.listOfPackets = []
+        # self.buttons = buttons
+        self.InputBox = None
+        self.activeNode = None
+        self.destinationNode = None
+    def activate(self, newHub):
+        if self.activeNode is not None:
+            self.activeNode.name = "HUB " + str(self.hubs.index(self.activeNode))
+            self.activeNode.img = self.level.nodeImg
+            # self.activeNode.img = pygame.transform.scale(self.activeNode.img, (50, 50))
+        newHub.name = "Active " + newHub.name
+        newHub.img =self.level.activeNodeImg
+        # newHub.img = pygame.transform.scale(newHub.img, (50, 50))
+        self.activeNode = newHub
 
-
-            if inputBox is not None:
-                inputBox.handle_event(event)
-
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-
-                for button in buttons:
-                    if button.rect.collidepoint(event.pos):
-                        if button.node_type == "Delete":
-                            nodes = []
-                            previous = None
-                            current = None
-                            x = 80
-                            y = 150
-                    if button.isMouseOver():
-                        if button.node_type == "HUB":
-                           x += 100
-                           if first:
-                               first = False
-                               previous = HUB(x, y, "HUB", "Pridame neskor")
-                               nodes.append(previous)
-                           else:
-                               current = HUB(x, y, "HUB", "Pridame neskor", previous)
-                               nodes.append(current)
-                               previous = current
-
+    def changeLevel(self, button):
+        if self.previousButtonLevel is not None:
+            self.previousButtonLevel.text_color = (255,255,255)
+        button.text_color = (0,0,0)
+        self.previousButtonLevel = button
 
 
-                        elif button.node_type == "Packet":
-                            x += 100
-                            # pygame.draw.rect(screen, "black",
-                            #                  (100, 100, 60, 100))
-                            if inputBox is None:
-                                inputBox = InputBox(100, 700, 200, 30)
-                                # print("Case1")
-                            inputBox.active = True
-                            if(inputBox == None):
-                                inputBox = InputBox(event.pos[0], event.pos[1], 200, 30)
-                                # print("Case2")
-                            #inputBox.draw(screen)
-                            # rect = pygame.Rect(x, y, 50, 100)
-                            # color = pygame.Color('black')
-                            # pygame.draw.rect(screen, color, rect, 20)
-                            # print("Kreslim inputbox")
-                            nodes.append(Packet(x, y, "Packet", "Pridame neskor"))
+
+    def draw_nodes(self):
+        pygame.init()
+
+        self.screen = pygame.display.set_mode((1000, 900))
+        pygame.display.set_caption("Vizualization of network Protocols")
+
+        clock = pygame.time.Clock()
+
+        x = 170
+        y = 190
+
+        while True:
+
+            for button in self.buttons:
+                button.isMouseOver()
+                button.drawButton(self.screen)
+                pygame.display.flip()
+            for event in pygame.event.get():
+                # responsible for dragging elements
+                for hub in self.hubs:
+                    hub.update_position(event)
+                    for endPoint in hub.endPoints:
+                        endPoint.update_position(event)
+                for packet in self.listOfPackets:
+                    packet.update_position(event)
+
+                if self.InputBox is not None:
+                    self.InputBox.handle_event(event)
+
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+
+                    for button in self.buttons:
+
+                        if button.rect.collidepoint(event.pos):
+                            print(f'Button clicked: {button.text}')
+                            if button.node_type == "Delete" and not self.buttonsBlocked:
+                                self.delete_everything()
+                        if button.isMouseOver():
+                            if button.node_type == "HUB" and self.continueProcess:
+                                if(not self.buttonsBlocked):
+                                    newHub = HUB(x, y, f"HUB{len(self.hubs)}", self.level.nodeImg, "", len(self.hubs), self)
+                                    if (len(self.hubs) > 0):
+                                        self.activeNode.addSubHub(newHub)
+                                        newHub.addSubHub(self.activeNode)
+                                    self.hubs.append(newHub)
+
+                                    self.activate(newHub)
+
+                            elif button.node_type == "Packet" and self.continueProcess:
+
+                                if (len(self.hubs) > 0 and not self.buttonsBlocked):
+                                    packet = Packet(self.level.packetImage, self.activeNode.x, self.activeNode.y, "Packet", "")
+                                    self.currentPacket = packet
+                                    inputBox = packet.createInputBox()
+                                    self.InputBox = inputBox
+                                    self.buttons.append(Button(650, 760, 100, 50, "button.png", "Send", "Send", "buttonHover.png"))
+                                    self.buttonsBlocked = True
 
 
-                        elif button.node_type == "EndPoint":
-                            y += 100
+                            elif button.node_type == "EndPoint" and self.continueProcess:
+                                if(not self.buttonsBlocked):
+                                    self.activeNode.addEndPoint(EndPoint(x, y, "EndPoint", self.level.endPointImg, ""))
 
-                            if first:
-                                first = False
-                                previous = EndPoint(x, y, "EndPoint", "Pridame neskor")
-                                nodes.append(previous)
+                            elif button.node_type == "Quit":
+                                pygame.quit()
+                                sys.exit()
+
+                            elif button.node_type == "Send":
+
+
+                                inputBox.saveData()
+                                check = self.level.sendData(self.activeNode, self.currentPacket)
+                                for hub in self.hubs:
+                                    if hub != self.activeNode:
+                                        hub.img = self.level.nodeImg
+                                    for endPoint in hub.endPoints:
+                                        endPoint.setToDefaultColor()
+
+                                if check == True:
+                                    self.mainButtonsBlocked = False
+                                    self.InputBox = None
+                                    buttons.remove(button)
+                                    self.buttonsBlocked = False
+                                    for hub in self.hubs:
+                                        if hub == self.activeNode:
+                                            continue
+                                        hub.setToDefaultColor()
+                                        for endPoint in hub.endPoints:
+                                            endPoint.setToDefaultColor()
+                                else:
+                                    self.InputBox.setErrorState()
+
+                            elif button.node_type == "Physical Layer":
+                                self.level = PhysicalLevel(self)
+                                self.delete_everything()
+                                self.backgroundColor = self.level.backColor
+                                self.changeLevel(button)
+
+
+                            elif button.node_type == "Application Layer":
+                                self.level = ApplicationLevel()
+                                self.delete_everything()
+                                self.backgroundColor = self.level.backColor
+                                self.changeLevel(button)
+                            elif button.node_type == "Transport Layer":
+                                self.level = TransportLevel()
+                                self.delete_everything()
+                                self.backgroundColor = self.level.backColor
+                                self.changeLevel(button)
+            self.screen.fill(self.backgroundColor)
+
+
+
+            for hub in self.hubs:
+                for endPoint in hub.endPoints:
+                    if endPoint.isMouseOver() and self.continueProcess:
+                        font = pygame.font.Font(None, 24)
+                        macText = font.render("MAC:" + endPoint.MACadress, True, (0, 0, 0), endPoint.text_bg_color)
+                        self.screen.blit(macText, (endPoint.x + endPoint.size // 2 + 10, endPoint.y - endPoint.size // 2))
+
+                        ipText = font.render("IP:" + endPoint.ip_address, True, (0, 0, 0), endPoint.text_bg_color)
+                        self.screen.blit(ipText, (endPoint.x + endPoint.size // 2 + 10, endPoint.y - endPoint.size // 2 + 20))
+
+                        if event.type == pygame.MOUSEBUTTONDOWN:
+                            if event.button == 3 and self.buttonsBlocked and not self.currentPacket.isDestinationIPSet():
+                                self.currentPacket.destinationIP = endPoint.ip_address
+                                endPoint.setToChosenColor()
+
+                if hub.isMouseOver():
+                    shift = 20
+                    font = pygame.font.Font(None, 24)
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if event.button == 1:
+                            if self.continueProcess:
+                                for i in range(len(hub.recievedPackets)):
+                                    messageText = font.render(f"{i + 1}." + hub.recievedPackets[i].getData(), True, (0, 0, 0), hub.text_bg_color)
+                                    self.screen.blit(messageText, (hub.x + hub.size // 2 + 10, (hub.y - hub.size // 2 - 20) + shift * i))
+                            elif hub != self.activeNode:
+                                self.destinationNode = hub
+                                print(self.destinationNode.name)
+                        elif event.button == 3 and self.continueProcess:
+                            if not self.buttonsBlocked:
+                                self.activate(hub)
                             else:
-                                current = EndPoint(x, y, "EndPoint", "Pridame neskor", previous)
-                                nodes.append(current)
-                                # previous = current
-
-        # input_box2.update()
-        # input_box2.draw(screen)
-        screen.fill((255, 255, 255))
-
-        for node in nodes:
-            if node.isMouseOver():
-                font = pygame.font.Font(None, 24)
-                text = font.render(node.get_info(), True, (0, 0, 0), node.text_bg_color)
-                screen.blit(text, (node.x - node.size // 2, node.y - node.size // 2 - 20))
-
-        for node in nodes:
-            if isinstance(node, HUB) or isinstance(node, EndPoint):
-                node.draw(screen)
-                if node.previousNode is not None:
-                    node.connect(screen)
-            else:
-                node.draw(screen)
+                                if not self.currentPacket.isDestinationIPSet() and not hub == self.activeNode:
+                                    self.currentPacket.destinationIP = hub.ip_address
+                                    print("Address: " + self.currentPacket.destinationIP)
+                                    # hub.setToChosenColor()
+                                    hub.img = self.level.activeNodeImg
 
 
 
 
-        for button in buttons:
-            button.draw(screen)
+                    else:
+                        macText = font.render("MAC:" + hub.MACadress, True, (0, 0, 0), hub.text_bg_color)
+                        self.screen.blit(macText, (hub.x + hub.size // 2 + 10, hub.y - hub.size // 2))
 
-        pygame.display.flip()
-        clock.tick(60)
-# def main():
-#     clock = pygame.time.Clock()
-#     pygame.init()
-#
-#     screen = pygame.display.set_mode((1000, 900))
-#     input_box1 = InputBox(100, 100, 140, 32)
-#     input_box2 = InputBox(100, 300, 140, 32)
-#     input_boxes = [input_box1, input_box2]
-#     done = False
-#
-#     while not done:
-#         for event in pygame.event.get():
-#             if event.type == pygame.QUIT:
-#                 done = True
-#             for box in input_boxes:
-#                 box.handle_event(event)
-#
-#         for box in input_boxes:
-#             box.update()
+                        ipText = font.render("IP:" + hub.ip_address, True, (0, 0, 0), hub.text_bg_color)
+                        self.screen.blit(ipText, (hub.x + hub.size // 2 + 10, hub.y - hub.size // 2 + 20))
 
-#
-#         screen.fill((30, 30, 30))
-#         for box in input_boxes:
-#             box.draw(screen)
-#
-#         pygame.display.flip()
-#         clock.tick(30)
+            # for hub in self.hubs:
+            #     if event.type == pygame.MOUSEBUTTONDOWN:
+            #         if event.button == 3 and self.continueProcess:
+            #             if not self.buttonsBlocked:
+            #                 self.activate(hub)
+            #             elif not self.currentPacket.isDestinationIPSet() and not hub == self.activeNode:
+            #                 self.currentPacket.destinationIP = hub.ip_address
+            #                 print("Address: " + self.currentPacket.destinationIP)
+            #                 hub.setToChosenColor()
+
+
+
+
+
+            for i in range(len(self.hubs)):
+                self.hubs[i].draw(self.screen)
+                self.hubs[i].connectToEndPoints(self.screen)
+                for subHub in self.hubs[i].subHubs:
+                    self.hubs[i].connect(self.screen, subHub)
+                self.hubs[i].updateSending()
+
+            for packet in self.listOfPackets:
+                packet.draw(self.screen)
+
+
+
+
+            for button in self.buttons:
+                if button.node_type == "Start":
+                    for hub in self.hubs:
+                        if button.is_hub_in_area(hub) or self.mainButtonsBlocked:
+                            self.continueProcess = False
+                        else:
+                            self.continueProcess = True
+                # Draw green frame for the "Start" button
+                if button.node_type == "Start":
+                    pygame.draw.rect(self.screen, (0, 255, 0), button.rect, 2)
+                button.drawButton(self.screen)
+                if self.InputBox is not None:
+                    self.InputBox.draw(self.screen)
+
+            pygame.display.flip()
+
+
 if __name__ == "__main__":
-    nodes = []
     buttons = [
-        Button(200, 50, 100, 50, (0, 0, 0), "HUB", "HUB"),
-        Button(350, 50, 100, 50, (0, 0, 0), "Packet", "Packet"),
-        Button(500, 50, 150, 50, (0, 0, 0), "EndPoint", "EndPoint"),
-        Button(700, 50, 200, 50, (0, 0, 0), "Delete all", "Delete")
+        Button(200, 50, 150, 100, "button.png", "Node", "HUB", "buttonHover.png"),
+        Button(350, 50, 150, 100, "button.png", "Data", "Packet", "buttonHover.png"),
+        Button(500, 50, 200, 100, "button.png", "EndPoint", "EndPoint", "buttonHover.png"),
+        Button(700, 50, 250, 100, "button.png", "Delete all", "Delete", "buttonHover.png"),
+        Button(880, 300, 150, 100, "button.png", "Quit", "Quit", "buttonHover.png"),
+        Button(80, 150, 250, 100, "button.png", "", "Start", "buttonHover.png"),
+        Button(780, 400, 250, 100, "button.png", "Physical Layer", "Physical Layer", "buttonHover.png"),
+        Button(780, 500, 250, 100, "button.png", "Transport Layer", "Transport Layer", "buttonHover.png"),
+        Button(780, 590, 270, 100, "button.png", "Application Layer", "Application Layer", "buttonHover.png")
     ]
-    draw_nodes(nodes, buttons)
-    #main()
+
+    drawer = Drawer(buttons)
+    drawer.draw_nodes()
